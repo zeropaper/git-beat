@@ -1,0 +1,16 @@
+{
+  "globals": {
+    "describe": false,
+    "xdescribe": false,
+    "before": false,
+    "after": false,
+    "beforeEach": false,
+    "afterEach": false,
+    "it": false,
+    "xit": false
+  },
+  "node": true,
+  "browser": true,
+  "indent": 2,
+  "strict": true
+}

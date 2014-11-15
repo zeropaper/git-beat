@@ -1,0 +1,245 @@
+'use strict';
+var expect = require('expect.js');
+var path = require('path');
+var fs = require('fs-extra');
+var tmp = require('tmp');
+
+var projectPath = path.resolve(__dirname, './..');
+var pkg = require(projectPath + '/package.json');
+
+
+tmp.setGracefulCleanup();
+
+describe('git-beat', function () {
+  var tmpDirPath;
+
+  before(function (done) {
+    tmp.dir(function (err, createdPath) {
+      if (err) {
+        return done(err);
+      }
+      tmpDirPath = createdPath;
+
+      done();
+    });
+  });
+
+
+  var gitBeat;
+  var GitBeat;
+  describe('contructor', function () {
+    it('intanciates', function () {
+      expect(function () {
+        GitBeat = require(projectPath + '/lib/git-beat');
+      }).not.to.throwError(function (err) {
+        console.info('loading error', err.stack);
+      });
+
+
+      expect(function () {
+        gitBeat = new GitBeat({
+          logger: function () { console.info('TEST:', arguments); },
+          cwd: tmpDirPath
+        });
+      }).not.to.throwError();
+
+      expect(gitBeat.cwd).to.be(tmpDirPath);
+    });
+  });
+
+
+  describe('clone()', function () {
+    it('clones a repository', function (done) {
+      expect(gitBeat.clone).to.be.a('function');
+
+      gitBeat.clone({
+        dest: 'git-beat',
+        // url: 'file://' + path.resolve(__dirname, '..') + '/.git'
+        url: pkg.repository.url
+      }, function (err) {
+        expect(err).to.eql(null);
+        expect(gitBeat.cwd).to.be(tmpDirPath + '/git-beat/');
+        done();
+      });
+    });
+  });
+
+  describe('log()', function () {
+    var log;
+
+    it('get the log', function (done) {
+      expect(gitBeat.log).to.be.a('function');
+
+      gitBeat.log(function (err, result) {
+        expect(err).to.eql(null);
+        expect(result).to.be.an('object');
+        expect(Object.keys(result).length).not.to.be(0);
+        log = result;
+        done();
+      });
+    });
+
+
+
+    describe('the results', function () {
+      var hash;
+      var commit;
+
+      before(function (done) {
+        hash = Object.keys(log)[0];
+        commit = log[hash];
+        done();
+      });
+
+      it('use the hash as key', function () {
+        expect(commit).to.be.an('object');
+      });
+
+      it('has formatted information', function () {
+        expect(commit).to.have.keys([
+          'abbreviatedHash',
+          'authorDate',
+          'authorName',
+          'committerDate',
+          'committerName',
+          'commitNotes',
+          'subject',
+          'body'
+        ]);
+
+        expect(commit.body).not.to.be('\n');
+      });
+    });
+
+    describe('log() search', function () {
+      xit('allows to search commits by their message', function (done) {
+        done();
+      });
+    });
+  });
+
+
+  describe('branch()', function () {
+    var newBranchName = 'new-branch' + Math.round(Math.random() * 1000);
+
+    it('get the list of branches', function (done) {
+      gitBeat.branch(function (err, result) {
+        expect(err).to.eql(null);
+        expect(result).to.be.an('object');
+
+        expect(result.master).to.be(true);
+        expect(result['remotes/origin/HEAD -> origin/master']).to.be(false);
+
+        done();
+      });
+    });
+
+
+    it('creates new branches', function (done) {
+      gitBeat.branch({
+        create: newBranchName
+      }, function (err) {
+        expect(err).to.eql(null);
+
+        gitBeat.branch(function (err, result) {
+          expect(err).to.eql(null);
+
+          expect(result).to.be.an('object');
+
+          expect(result[newBranchName]).to.be(true);
+          done();
+        });
+      });
+    });
+
+
+    it('drops (delete) branches', function (done) {
+      gitBeat.branch({
+        drop: newBranchName
+      }, done);
+    });
+  });
+
+
+
+
+  describe('checkout()', function () {
+    it('switches between branches', function (done) {
+      gitBeat.checkout('does-not-exists', function (err) {
+        expect(err).not.to.eql(null);
+
+        done();
+      });
+    });
+
+
+    it('switches between branches', function (done) {
+      gitBeat.checkout('testing', function (err, result) {
+        expect(err).to.eql(null);
+        // expect(result).to.be.an('object');
+
+        // ...
+
+        done();
+      });
+    });
+  });
+
+
+  describe('status()', function () {
+    var status;
+
+    before(function (done) {
+      fs.writeFile(gitBeat.cwd + '/new-file.txt', 'content', function (err) {
+        if (err) {
+          return done(err);
+        }
+
+        fs.readFile(gitBeat.cwd + '/existing.md', function (err, content) {
+          if (err) {
+            return done(err);
+          }
+
+          fs.writeFile(gitBeat.cwd + '/existing.md', content + '\nnew line', function (err) {
+            if (err) {
+              return done(err);
+            }
+
+            done();
+          });
+        });
+      });
+    });
+
+
+    it('collect status information', function (done) {
+      gitBeat.status(function (err, result) {
+        expect(err).to.eql(null);
+        expect(result).to.be.an('object');
+        status = result;
+        done();
+      });
+    });
+
+
+    it('handles new files', function () {
+      var newFile = status['new-file.txt'];
+      expect(newFile).to.be.an('object');
+      expect(newFile.remote).to.be('untracked');
+      expect(newFile.local).to.be('untracked');
+    });
+
+
+    it('handles modified files', function () {
+      var changedFile = status['existing.md'];
+      expect(changedFile).to.be.an('object');
+      expect(changedFile.remote).to.be('unmodified');
+      expect(changedFile.local).to.be('modified');
+    });
+  });
+
+
+  // describe('operations()', function () {
+
+  // });
+});
