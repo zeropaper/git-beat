@@ -10,6 +10,19 @@ var pkg = require(projectPath + '/package.json');
 
 tmp.setGracefulCleanup();
 
+
+function searchTest(gb, search, done) {
+  gb.log({
+    search: search
+  }, function (err, result) {
+    expect(err).to.eql(null);
+    expect(result).to.be.an('object');
+
+    done(null, result);
+  });
+}
+
+
 describe('git-beat', function () {
   var tmpDirPath;
 
@@ -38,7 +51,7 @@ describe('git-beat', function () {
 
       expect(function () {
         gitBeat = new GitBeat({
-          logger: function () { console.info('TEST:', arguments); },
+          // logger: function () { console.info('TEST:', arguments); },
           cwd: tmpDirPath
         });
       }).not.to.throwError();
@@ -63,6 +76,31 @@ describe('git-beat', function () {
       });
     });
   });
+
+
+
+
+  describe('checkout()', function () {
+    it('switches between branches', function (done) {
+      gitBeat.checkout('does-not-exists', function (err) {
+        expect(err).not.to.eql(null);
+
+        done();
+      });
+    });
+
+
+    it('switches between branches', function (done) {
+      gitBeat.checkout('testing', function (err, result) {
+        expect(err).to.eql(null);
+        // expect(result).to.be.an('object');
+
+        // ...
+        done();
+      });
+    });
+  });
+
 
   describe('log()', function () {
     var log;
@@ -111,12 +149,40 @@ describe('git-beat', function () {
       });
     });
 
+
+
     describe('log() search', function () {
-      xit('allows to search commits by their message', function (done) {
-        done();
+      it('search commits with a string', function (done) {
+        searchTest(gitBeat, 'impr(text): add a line', function (err, result) {
+          var keys = Object.keys(result);
+          var commit = result[keys[0]];
+
+          expect(keys.length).to.be(1);
+
+          expect(commit.subject).to.be('impr(text): add a line');
+
+
+          searchTest(gitBeat, 'add a second', function (err, result) {
+            var keys = Object.keys(result);
+
+            expect(keys.length).to.be(2);
+
+            searchTest(gitBeat, 'for testing purposes', function (err, result) {
+              var keys = Object.keys(result);
+
+              expect(keys.length).to.be(2);
+
+              done();
+            });
+          });
+        });
       });
     });
   });
+
+
+
+
 
 
   describe('branch()', function () {
@@ -127,7 +193,7 @@ describe('git-beat', function () {
         expect(err).to.eql(null);
         expect(result).to.be.an('object');
 
-        expect(result.master).to.be(true);
+        expect(result.testing).to.be(true);
         expect(result['remotes/origin/HEAD -> origin/master']).to.be(false);
 
         done();
@@ -162,28 +228,6 @@ describe('git-beat', function () {
 
 
 
-
-  describe('checkout()', function () {
-    it('switches between branches', function (done) {
-      gitBeat.checkout('does-not-exists', function (err) {
-        expect(err).not.to.eql(null);
-
-        done();
-      });
-    });
-
-
-    it('switches between branches', function (done) {
-      gitBeat.checkout('testing', function (err, result) {
-        expect(err).to.eql(null);
-        // expect(result).to.be.an('object');
-
-        // ...
-
-        done();
-      });
-    });
-  });
 
 
   describe('status()', function () {
@@ -224,6 +268,7 @@ describe('git-beat', function () {
 
     it('handles new files', function () {
       var newFile = status['new-file.txt'];
+
       expect(newFile).to.be.an('object');
       expect(newFile.remote).to.be('untracked');
       expect(newFile.local).to.be('untracked');
@@ -232,6 +277,7 @@ describe('git-beat', function () {
 
     it('handles modified files', function () {
       var changedFile = status['existing.md'];
+
       expect(changedFile).to.be.an('object');
       expect(changedFile.remote).to.be('unmodified');
       expect(changedFile.local).to.be('modified');
