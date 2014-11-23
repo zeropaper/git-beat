@@ -40,7 +40,7 @@ describe('git-beat', function () {
 
   var gitBeat;
   var GitBeat;
-  describe('contructor', function () {
+  describe('constructor', function () {
     it('intanciates', function () {
       expect(function () {
         GitBeat = require(projectPath + '/lib/git-beat');
@@ -81,7 +81,7 @@ describe('git-beat', function () {
 
 
   describe('checkout()', function () {
-    it('switches between branches', function (done) {
+    it('cannot switch to unexisting branch', function (done) {
       gitBeat.checkout('does-not-exists', function (err) {
         expect(err).not.to.eql(null);
 
@@ -119,22 +119,20 @@ describe('git-beat', function () {
 
 
 
-    describe('the results', function () {
-      var hash;
+    describe('result array', function () {
       var commit;
 
       before(function (done) {
-        hash = Object.keys(log)[0];
-        commit = log[hash];
+        commit = log[2];
+        // console.info('commit', JSON.stringify(commit, null, 2));
         done();
       });
 
-      it('use the hash as key', function () {
-        expect(commit).to.be.an('object');
-      });
-
       it('has formatted information', function () {
+        expect(commit).to.be.an('object');
+
         expect(commit).to.have.keys([
+          'hash',
           'abbreviatedHash',
           'authorDate',
           'authorName',
@@ -142,35 +140,59 @@ describe('git-beat', function () {
           'committerName',
           'commitNotes',
           'subject',
-          'body'
+          'body',
+          'summary',
+          'stat'
         ]);
 
+        expect(commit.subject).to.be('impr(file): add a second file');
+
         expect(commit.body).not.to.be('\n');
+
+        expect(commit.stat).to.be.an('object');
+      });
+
+      it('parses the conventional commit subjects', function () {
+        expect(commit.conventional).to.be.an('object');
+
+        expect(commit.conventional).to.have.keys([
+          'type',
+          'scope',
+          'subject'
+        ]);
+
+        expect(commit.conventional.type).to.be('impr');
+
+        expect(commit.conventional.scope).to.be('file');
+
+        expect(commit.conventional.subject).to.be('add a second file');
+      });
+
+
+      it('is sorted by committerDate', function () {
+        expect(log[0].hash).to.be('e6f9476cc980a9cec548eb0f28fede63a2d2ed57');
+
+        expect(log[3].hash).to.be('1ee2f06a77539542be1bda4ee4891cf899ece238');
       });
     });
 
 
 
-    describe('log() search', function () {
+    describe('search', function () {
       it('search commits with a string', function (done) {
         searchTest(gitBeat, 'impr(text): add a line', function (err, result) {
-          var keys = Object.keys(result);
-          var commit = result[keys[0]];
+          var commit = result[0];
 
-          expect(keys.length).to.be(1);
+          expect(result.length).to.be(1);
 
           expect(commit.subject).to.be('impr(text): add a line');
 
 
           searchTest(gitBeat, 'add a second', function (err, result) {
-            var keys = Object.keys(result);
-
-            expect(keys.length).to.be(2);
+            expect(result.length).to.be(2);
 
             searchTest(gitBeat, 'for testing purposes', function (err, result) {
-              var keys = Object.keys(result);
-
-              expect(keys.length).to.be(2);
+              expect(result.length).to.be(2);
 
               done();
             });
@@ -219,7 +241,7 @@ describe('git-beat', function () {
     });
 
 
-    it('drops (delete) branches', function (done) {
+    xit('drops (delete) branches', function (done) {
       gitBeat.branch({
         drop: newBranchName
       }, done);
@@ -283,9 +305,4 @@ describe('git-beat', function () {
       expect(changedFile.local).to.be('modified');
     });
   });
-
-
-  // describe('operations()', function () {
-
-  // });
 });
