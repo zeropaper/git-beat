@@ -51,7 +51,7 @@ describe('git-beat', function () {
 
       expect(function () {
         gitBeat = new GitBeat({
-          // logger: function () { console.info('TEST:', arguments); },
+          logger: function () { console.info('TEST:', arguments); },
           cwd: tmpDirPath
         });
       }).not.to.throwError();
@@ -123,7 +123,7 @@ describe('git-beat', function () {
       var commit;
 
       before(function (done) {
-        commit = log[2];
+        commit = log[1];
         // console.info('commit', JSON.stringify(commit, null, 2));
         done();
       });
@@ -150,6 +150,10 @@ describe('git-beat', function () {
         expect(commit.body).not.to.be('\n');
 
         expect(commit.stat).to.be.an('object');
+
+        expect(commit.committerDate instanceof Date).to.be(true);
+
+        expect(commit.authorDate instanceof Date).to.be(true);
       });
 
       it('parses the conventional commit subjects', function () {
@@ -170,9 +174,9 @@ describe('git-beat', function () {
 
 
       it('is sorted by committerDate', function () {
-        expect(log[0].hash).to.be('e6f9476cc980a9cec548eb0f28fede63a2d2ed57');
+        expect(log[0].committerDate > log[1].committerDate).to.be(true);
 
-        expect(log[3].hash).to.be('1ee2f06a77539542be1bda4ee4891cf899ece238');
+        expect(log[1].committerDate > log[2].committerDate).to.be(true);
       });
     });
 
