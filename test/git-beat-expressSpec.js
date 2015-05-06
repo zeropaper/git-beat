@@ -1,7 +1,7 @@
 'use strict';
 var expect = require('expect.js');
 var path = require('path');
-// var fs = require('fs-extra');
+
 var tmp = require('tmp');
 var request = require('supertest');
 var express = require('express');
@@ -11,13 +11,8 @@ var app = express();
 var projectPath = path.resolve(__dirname, './..');
 var pkg = require(projectPath + '/package.json');
 
-var repos = {};
 
 
-// gitBeat.clone({
-//   dest: 'git-beat',
-//   // url: 'file://' + path.resolve(__dirname, '..') + '/.git'
-//   url: pkg.repository.url
 
 tmp.setGracefulCleanup();
 
@@ -26,6 +21,7 @@ tmp.setGracefulCleanup();
 
 
 describe('git-beat express middleware', function () {
+  var repos = {};
   var tmpDirPath;
   var gitBeat;
   var GitBeat;
@@ -67,7 +63,7 @@ describe('git-beat express middleware', function () {
 
     expect(function () {
       middleware = gitBeatExpress({});
-    }).to.throwError();
+    }).to.throwError('Missing app');
 
     expect(function () {
       middleware = gitBeatExpress({
@@ -80,17 +76,6 @@ describe('git-beat express middleware', function () {
 
     expect(function () {
       app.use(middleware);
-    }).not.to.throwError(function (err) {
-      console.info('use as middleware error', err.stack);
-    });
-
-    expect(function () {
-      app.use('/path-prefixed', gitBeatExpress({
-        app: app,
-        pathPrefix: '/path-prefixed',
-        repos: repos,
-
-      }));
     }).not.to.throwError(function (err) {
       console.info('use as middleware error', err.stack);
     });
